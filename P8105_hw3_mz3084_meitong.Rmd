@@ -1,0 +1,347 @@
+---
+title: "p8105_hw3_mz3084_meitong"
+author: "Meitong Zhou"
+date: "2024-10-05"
+output: github_document
+---
+```{r}
+library(tidyverse)
+library(p8105.datasets)
+data("ny_noaa")
+```
+
+
+```{r}
+dim(ny_noaa)
+str(ny_noaa)
+```
+
+```{r}
+summary(ny_noaa)
+```
+This data contains `r dim(ny_noaa)[1]` rows and `r dim(ny_noaa)[2]` columns, and the variables include station id, date, prcp, snow, tmin and tmax.
+
+
+```{r}
+ny_noaa = ny_noaa |>
+  mutate(
+    tmax = as.numeric(tmax), 
+    tmin = as.numeric(tmin)   
+  )
+ny_noaa_df = ny_noaa |>
+  mutate(
+    year = as.numeric(substr(date, 1, 4)),  
+    month = as.numeric(substr(date, 6, 7)),
+    day = as.numeric(substr(date, 9, 10)),  
+    prcp = prcp / 10,  # change unit into mm
+    tmax = tmax / 10,  # change unit into Celsius
+    tmin = tmin / 10   # change unit into Celsius
+  )
+
+
+head(ny_noaa_df)
+# check the value of snowfall
+ny_noaa_df |>
+  count(snow) |>
+  arrange(desc(n)) |>
+  head()
+```
+The most common value for Snow Amount is 0, probably because most dates outside of winter do not snow.
+
+
+
+```{r}
+average_tmax = ny_noaa_df |>
+  filter(month %in% c(1, 7), !is.na(tmax)) |>
+  group_by(id, year, month) |>
+  summarise(average_tmax = mean(tmax, na.rm = TRUE), .groups = "drop") |>
+  pivot_wider(
+    names_from = month,
+    values_from = average_tmax,
+    names_prefix = "month_"
+  )
+
+head(average_tmax)
+```
+
+```{r}
+colnames(average_tmax)
+```
+
+
+```{r}
+average_tmax = average_tmax |>
+  pivot_longer(
+    cols = starts_with("month_"),
+    names_to = "month",
+    names_prefix = "month_",
+    values_to = "average_tmax"
+  ) |>
+  mutate(month = as.numeric(month))
+```
+
+```{r}
+summary(average_tmax)
+```
+```{r}
+average_tmax = average_tmax |>
+  filter(!is.na(average_tmax))
+```
+
+
+
+```{r}
+ggplot(average_tmax, aes(x = factor(month), y = average_tmax, fill = factor(month))) +
+  geom_violin(alpha = 0.6) + 
+  facet_grid(~month) +
+  labs(
+    title = "Distribution of Average Max Temperature in January and July",
+    x = "Month",
+    y = "Average Max Temperature (°C)"
+  ) +
+  theme(legend.position = "bottom")
+```
+rom the violin plot, we can see that the average maximum temperature in January is concentrated between -10°C and 10°C, with a peak around 0°C. The temperature in July is mainly concentrated around 25°C, with a narrow distribution and no obvious outliers. There are not many extreme changes in temperature throughout the year, but the temperature difference between winter and summer is large.
+
+```{r}
+temp_df = ny_noaa_df |>
+  select(tmax, tmin) |>
+  pivot_longer(cols = c(tmax, tmin), names_to = "temperature_type", values_to = "value") |>
+  filter(!is.na(value))  
+
+
+ggplot(temp_df, aes(x = temperature_type, y = value, fill = temperature_type)) +
+  geom_violin(alpha = 0.6) +
+  labs(
+    title = "Distribution of tmax and tmin",
+    x = "Temperature Type",
+    y = "Temperature (°C)"
+  ) +
+  theme(legend.position = "bottom")
+```
+The distribution of tmax is concentrated between 0°C and 30°C and is biased to the right, indicating that the maximum temperature at some observation stations exceeds 30°C. Some observations are close to -30°C, suggesting freezing weather in the winter. The distribution of tmin is mainly concentrated between -20°C and 10°C and is biased to the left, indicating that the minimum temperature at many stations is below 0°C. Both distributions show a small number of extreme values.
+
+
+```{r}
+snow_df = ny_noaa_df |>
+  filter(snow > 0 & snow < 100)
+ggplot(snow_df, aes(x = factor(year), y = snow, fill = factor(year))) +
+  geom_violin(alpha = 0.6) +
+  labs(
+    title = "Distribution of Snowfall by Year (0 < snow < 100 mm)",
+    x = "Year",
+    y = "Snowfall (mm)"
+  ) +
+  theme(legend.position = "bottom")
+```
+The distribution of snowfall in the range of 0 to 100 mm is roughly similar each year, but there are still some differences between different years. Most years have snowfall concentrated in the range of 25 mm and less than 100 mm. Some years have large fluctuations in snowfall (such as 1993 and 2008).
+
+## Q2
+
+
+```{r}
+accel_df = read_csv("data/nhanes_accel.csv")
+accel_df = janitor::clean_names(accel_df)
+covar_df = read_csv("data/nhanes_covar.csv", skip = 4)
+covar_df = janitor::clean_names(covar_df)
+head(accel_df)
+head(covar_df)
+```
+Excluding participants less than 21 years of age and those with missing demographic data.
+
+```{r}
+covar_df= covar_df |>
+  filter(age >= 21)|>
+  drop_na()
+merged_df = accel_df |>
+  inner_join(covar_df, by = "seqn")
+merged_df = merged_df |>
+  mutate(gender = factor(sex, levels = c(1, 2), labels = c("male", "female")))|>
+  mutate(educations = factor(education, levels = c(1, 2,3), labels = c("Less than high school", "High school equivalent", "More than high school")))|>
+  relocate(seqn,gender,age,bmi,educations)
+   
+head(merged_df)
+```
+
+```{r}
+gender_educations_df = merged_df |>
+  group_by(educations, gender) |>
+  summarise(count = n()) 
+ print(gender_educations_df)
+```
+
+In the “Less than high school” group, the number of males is `r gender_educations_df$count[1]` and females is `r gender_educations_df$count[2]`；In the “High school equivalent” group, there are `r gender_educations_df$count[3]`males and `r gender_educations_df$count[4]` females；In the “More than high school” group, females is`r gender_educations_df$count[5]`and males is`r gender_educations_df$count[6]`.
+
+
+```{r}
+ggplot(merged_df, aes(x = age, fill=gender)) +
+  geom_histogram() +
+  facet_grid(~ educations) +
+  labs(title = "Age Distribution by Gender and Educations Level",
+       x = "age",
+       y = "count") +
+  theme(legend.position = "bottom")
+```
+In the “Less than high school” group, there are more males in the older age ranges (60 and above), particularly around 80 years old, while females are more evenly distributed across ages. In the “High school equivalent” group, the distribution is more balanced between genders. In the “More than high school” group, females dominate in the young-aged. 
+
+```{r}
+minute_data = grep("min", names(merged_df), value = TRUE)
+merged_df = within(merged_df, {
+  total_activity = apply(merged_df[, minute_data], 1, sum)
+  })
+merged_df = merged_df |>
+  group_by(seqn, gender, educations, age) 
+
+# plot the age distributions for men and women in each education category
+ggplot(merged_df, aes(x = age, y = total_activity, color = gender)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  facet_grid(~ educations) +
+  labs(title = "total activity vs age by gender and education Level",
+       x = "Age",
+       y = "Total Activity") +
+  theme(legend.position = "bottom")
+```
+In all three education groups, total activity decreased with age. The trend lines for men and women generally followed similar trajectories, with women in the "high school equivalency" and "high school or more" groups having slightly higher levels of activity as they aged.
+
+```{r}
+new_merged_df = merged_df |>
+  pivot_longer(
+    cols = starts_with("min"), 
+    names_to = "minute", 
+    values_to = "MIMS") |>
+  mutate(minute = as.numeric(substr(minute, 4, nchar(minute))))
+
+ggplot(new_merged_df, aes(x = minute, y = MIMS, color = gender)) +
+  geom_line(alpha=.1) +
+  geom_smooth(se = FALSE) +
+  facet_grid(~educations) +
+  labs(title = " 24-hour activity time courses for each education level", x = "Minute", y = "MIMS") +
+  theme(legend.position = "bottom")
+```
+
+Across all groups, there was a similar trend: activity levels were lower in the morning, peaking during the day and decreasing again in the evening, with no major differences between males and females.
+
+## Q3
+
+```{r}
+jan_2020 = read_csv("citibike/Jan 2020 Citi.csv")
+jan_2024 = read_csv("citibike/Jan 2024 Citi.csv")
+july_2020 = read_csv("citibike/July 2020 Citi.csv")
+july_2024 = read_csv("citibike/July 2024 Citi.csv")
+
+jan_2020 = jan_2020 |>
+  mutate(year = 2020, month = "January")
+jan_2020 = janitor::clean_names(jan_2020)
+jan_2024 =  jan_2024 |>
+  mutate(year = 2024, month = "January")
+jan_2024 = janitor::clean_names(jan_2024)
+july_2020 = july_2020 |>
+  mutate(year = 2020, month = "July")
+july_2020 = janitor::clean_names(july_2020)
+july_2024 = july_2024 |>
+  mutate(year = 2024, month = "July")
+july_2024 = janitor::clean_names(july_2024)
+
+combined_df = bind_rows(jan_2020, jan_2024, july_2020, july_2024)
+
+combined_df = combined_df |>
+  drop_na(ride_id, start_station_name, end_station_name, duration)
+
+print(combined_df)
+```
+I deleted the NA rows when tidying the table. The final composite table has r `nrow(combined_df)` rows and `r ncol(combined_df)` columns, where the variables include ride_id, start_station_name, end_station_name, duration, rideable_type, member_casual, year, month and weekdays
+
+```{r}
+rides_by_month_year = combined_df |>
+  group_by(year, month, member_casual) |>
+  summarise(total_rides = n()) |>
+  arrange(year, month)
+print(rides_by_month_year)
+```
+The data reveals a significant increase in total rides from 2020 to 2024. Members take significantly more rides than casual users in all periods.
+
+
+```{r}
+start_stations_july_2024 = combined_df |>
+  filter(year == 2024 , month == "July") |>
+  group_by(start_station_name) |>
+  summarise(total_rides = n()) |>
+  arrange(desc(total_rides)) |>
+  top_n(5)
+print(start_stations_july_2024)
+```
+The station “Pier 61 at Chelsea Piers” recorded the highest number of rides with `r start_stations_july_2024$total_rides[1]`, followed by “University Pl & E 14 St” with `r start_stations_july_2024$total_rides[2]` rides. Other popular stations include “W 21 St & 6 Ave” (`r start_stations_july_2024$total_rides[3]`), “West St & Chambers St” (`r start_stations_july_2024$total_rides[4]`), and “W 31 St & 7 Ave” (`r start_stations_july_2024$total_rides[5]`). 
+
+```{r}
+combined_df = combined_df|>
+  mutate(weekdays = factor(weekdays, 
+                           levels = c("Monday", "Tuesday", "Wednesday", 
+                                      "Thursday", "Friday", "Saturday", "Sunday")))
+
+med_duration = combined_df |>
+  group_by(year, month, weekdays) |>
+  summarise(med_duration = median(duration), na.rm = TRUE)
+
+ggplot(med_duration, aes(x = weekdays, y = med_duration, color = month)) +
+  geom_point(size = 3, alpha = 0.5) + 
+  facet_grid(~ year) 
+  labs(title = "Effect of Day of Week, Month, and Year on Average Ride Duration",
+       x = "Day of the Week", y = "Average Ride Duration (minutes)") +
+ theme(legend.position = "bottom")
+
+```
+
+In both years, July exhibits higher median ride durations compared to January, likely due to favorable weather conditions encouraging longer rides. Additionally, for both years, weekends tend to have higher median durations. In 2024, median ride durations appear lower overall compared to 2020.
+
+```{r}
+data_2024 <- combined_df |>
+  filter(year == 2024)
+
+ggplot(data_2024, aes(x = month, y = duration, fill = rideable_type)) +
+  geom_violin(trim = FALSE, alpha = 0.7) + 
+  facet_wrap(~ member_casual) +  
+  labs(title = "Month, Membership Status, and Bike Type on Ride Duration-24",
+       x = "Month", y = "Ride Duration (minutes)") +
+  theme(legend.position = "bottom")
+```
+Casual users tend to have a wider range of ride durations, particularly in July. Members show shorter ride durations. Electric bikes show slightly longer ride durations compared to classic bikes for both user types.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
