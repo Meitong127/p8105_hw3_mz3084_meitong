@@ -10,6 +10,7 @@ library(p8105.datasets)
 data("ny_noaa")
 ```
 
+## Q1
 
 ```{r}
 dim(ny_noaa)
@@ -83,6 +84,7 @@ average_tmax = average_tmax |>
 ```{r}
 summary(average_tmax)
 ```
+
 ```{r}
 average_tmax = average_tmax |>
   filter(!is.na(average_tmax))
@@ -170,12 +172,12 @@ gender_educations_df = merged_df |>
  print(gender_educations_df)
 ```
 
-In the “Less than high school” group, the number of males is `r gender_educations_df$count[1]` and females is `r gender_educations_df$count[2]`；In the “High school equivalent” group, there are `r gender_educations_df$count[3]`males and `r gender_educations_df$count[4]` females；In the “More than high school” group, females is`r gender_educations_df$count[5]`and males is`r gender_educations_df$count[6]`.
+In the “Less than high school” group, the number of males is `r gender_educations_df$count[1]` and females is `r gender_educations_df$count[2]`；In the “High school equivalent” group, there are  `r gender_educations_df$count[3]` males and  `r gender_educations_df$count[4]` females；In the “More than high school” group, females is `r gender_educations_df$count[5]` and males is `r gender_educations_df$count[6]`.
 
 
 ```{r}
 ggplot(merged_df, aes(x = age, fill=gender)) +
-  geom_histogram() +
+  geom_histogram(bins = 30) +
   facet_grid(~ educations) +
   labs(title = "Age Distribution by Gender and Educations Level",
        x = "age",
@@ -250,7 +252,7 @@ combined_df = combined_df |>
 
 print(combined_df)
 ```
-I deleted the NA rows when tidying the table. The final composite table has r `nrow(combined_df)` rows and `r ncol(combined_df)` columns, where the variables include ride_id, start_station_name, end_station_name, duration, rideable_type, member_casual, year, month and weekdays
+I deleted the NA rows when tidying the table. The final composite table has `r nrow(combined_df)` rows and `r ncol(combined_df)` columns, where the variables include ride_id, start_station_name, end_station_name, duration, rideable_type, member_casual, year, month and weekdays
 
 ```{r}
 rides_by_month_year = combined_df |>

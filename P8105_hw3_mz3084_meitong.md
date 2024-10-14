@@ -23,6 +23,8 @@ library(p8105.datasets)
 data("ny_noaa")
 ```
 
+## Q1
+
 ``` r
 dim(ny_noaa)
 ```
@@ -374,21 +376,19 @@ gender_educations_df = merged_df |>
     ## 6 More than high school  female    59
 
 In the “Less than high school” group, the number of males is 27 and
-females is 28；In the “High school equivalent” group, there are 35males
-and 23 females；In the “More than high school” group, females is56and
-males is59.
+females is 28；In the “High school equivalent” group, there are 35 males
+and 23 females；In the “More than high school” group, females is 56 and
+males is 59.
 
 ``` r
 ggplot(merged_df, aes(x = age, fill=gender)) +
-  geom_histogram() +
+  geom_histogram(bins = 30) +
   facet_grid(~ educations) +
   labs(title = "Age Distribution by Gender and Educations Level",
        x = "age",
        y = "count") +
   theme(legend.position = "bottom")
 ```
-
-    ## `stat_bin()` using `bins = 30`. Pick better value with `binwidth`.
 
 ![](P8105_hw3_mz3084_meitong_files/figure-gfm/unnamed-chunk-16-1.png)<!-- -->
 In the “Less than high school” group, there are more males in the older
@@ -541,9 +541,9 @@ print(combined_df)
     ## # ℹ 3 more variables: member_casual <chr>, year <dbl>, month <chr>
 
 I deleted the NA rows when tidying the table. The final composite table
-has r `nrow(combined_df)` rows and 9 columns, where the variables
-include ride_id, start_station_name, end_station_name, duration,
-rideable_type, member_casual, year, month and weekdays
+has 99253 rows and 9 columns, where the variables include ride_id,
+start_station_name, end_station_name, duration, rideable_type,
+member_casual, year, month and weekdays
 
 ``` r
 rides_by_month_year = combined_df |>
